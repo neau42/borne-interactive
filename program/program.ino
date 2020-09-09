@@ -169,17 +169,17 @@ void getDistance()
             distance_down=DEFAULTDISTANCE;
     }
   
-  if(distance_up>THRESHOLDDISTANCEMIN)//?
-    presence_up=distance_up<THRESHOLDDISTANCE;
+    if(distance_up>THRESHOLDDISTANCEMIN)//?
+        presence_up=distance_up<THRESHOLDDISTANCE;
+    
+    if(distance_down>THRESHOLDDISTANCEMIN)//?
+        presence_down=distance_down<THRESHOLDDISTANCE;
   
-  if(distance_down>THRESHOLDDISTANCEMIN)//?
-    presence_down=distance_down<THRESHOLDDISTANCE;
-  
-  Serial.print("distance:|");
-  Serial.print(distance_up);
-  Serial.print("|");
-  Serial.print(distance_down);
-  Serial.println("|");
+    Serial.print("distance:|");
+    Serial.print(distance_up);
+    Serial.print("|");
+    Serial.print(distance_down);
+    Serial.println("|");
 }
 
 /*
@@ -409,7 +409,7 @@ void printState()
  * move up the screen 
  */
 
-void control_motor(int pwm, int ina, int intb, int sel)
+void control_motor(int pwm, int ina, int inb, int sel)
 {
     analogWrite(PWM, pwm);
     digitalWrite(InA,ina);
