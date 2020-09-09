@@ -144,12 +144,11 @@ void getDistance()
   uint32_t distance_up;
   uint32_t distance_down;
   uint32_t distance;
-  int status;
   
   if(init_ok_up)
   {
-    status = sensor_up.GetDistance(&distance);
-    if (status == VL53L0X_ERROR_NONE)
+    // status = sensor_up.GetDistance(&distance);
+    if (sensor_up.GetDistance(&distance) == VL53L0X_ERROR_NONE)
     {
       distance_up=distance;
       timeout_up.reset();
@@ -160,8 +159,8 @@ void getDistance()
   
     if(init_ok_down)
     { 
-        status = sensor_down.GetDistance(&distance);
-        if (status == VL53L0X_ERROR_NONE)
+        // status = sensor_down.GetDistance(&distance);
+        if (sensor_down.GetDistance(&distance) == VL53L0X_ERROR_NONE)
         {
             distance_down=distance;
             timeout_down.reset();
