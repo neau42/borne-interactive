@@ -44,12 +44,12 @@ const int DEFAULTDISTANCE = THRESHOLDDISTANCE+500;
 // const int TIMEOUTDISTANCE = 500;
 
 enum state_t {
-  idle,
-  person_detected,
-  move_up,
-  move_down,
-  move_stop,
-  screen_reset
+    idle,
+    person_detected,
+    move_up,
+    move_down,
+    move_stop,
+    screen_reset
 };
 
 state_t state = screen_reset;
@@ -69,75 +69,70 @@ bool init_ok_down=true;
 
 /* Setup ---------------------------------------------------------------------*/
 
-void setup() {
-  int status;
-  // Led.
-  pinMode(LED_BUILTIN, OUTPUT);
+void setup()
+{
+    int status;
+    // Led.
+    pinMode(LED_BUILTIN, OUTPUT);
 
-  // Initialize serial for output.
-  Serial.begin(9600);
+    // Initialize serial for output.
+    Serial.begin(9600);
 
-  pinMode(interrupter, INPUT);
-  attachInterrupt(digitalPinToInterrupt(interrupter), ISR, RISING); 
+    pinMode(interrupter, INPUT);
+    attachInterrupt(digitalPinToInterrupt(interrupter), ISR, RISING); 
 
-  pinMode(InA, OUTPUT);
-  pinMode(InB, OUTPUT);
-  pinMode(SEL ,OUTPUT);
-  pinMode(PWM ,OUTPUT);
+    pinMode(InA, OUTPUT);
+    pinMode(InB, OUTPUT);
+    pinMode(SEL ,OUTPUT);
+    pinMode(PWM ,OUTPUT);
 
-  // Initialize I2C bus.
-  WIRE1.begin();
+    // Initialize I2C bus.
+    WIRE1.begin();
 
-  // Switch off VL53L0X component.
-  sensor_up.VL53L0X_Off();
-  sensor_down.VL53L0X_Off();
-  delay(1000);
-  
-  // Initialize VL53L0X top component.
-  status = sensor_up.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+7);
-  if(status)
-  {
-    init_ok_up=false;
-    Serial.println("Init sensor_up failed...");
-  }
-  else
-  {
-    Serial.println("Init sensor_up ok...");
-  }
-  delay(1000);
-  status = sensor_down.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+2);
-  if(status)
-  {
-    init_ok_down=false;
-    Serial.println("Init sensor_down failed...");
-  }
-  else
-  {
-    Serial.println("Init sensor_down ok...");
-  }
+    // Switch off VL53L0X component.
+    sensor_up.VL53L0X_Off();
+    sensor_down.VL53L0X_Off();
+    delay(1000);
+
+    // Initialize VL53L0X top component.
+    status = sensor_up.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+7);
+    if(status)
+    {
+        init_ok_up=false;
+        Serial.println("Init sensor_up failed...");
+    }
+    else
+        Serial.println("Init sensor_up ok...");
+    delay(1000);
+    status = sensor_down.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+2);
+    if(status)
+    {
+        init_ok_down=false;
+        Serial.println("Init sensor_down failed...");
+    }
+    else
+        Serial.println("Init sensor_down ok...");
 }
 
 // long long watchdog = millis();
 
 /* Loop ----------------------------------------------------------------------*/
 
-void loop() {
-  // Led blinking.
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(100);
-  digitalWrite(LED_BUILTIN, LOW);
-  
-//   watchdog= millis();
-
-  getDistance();
-  computeState();
-  printState();
-  
-//   if(millis()-watchdog>5000)
-//   {
-//     Serial.println("Watch dog !");
-//     state = screen_reset;
-//   }  
+void loop()
+{
+    // Led blinking.
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    //   watchdog= millis();
+    getDistance();
+    computeState();
+    printState();
+    //   if(millis()-watchdog>5000)
+    //   {
+    //     Serial.println("Watch dog !");
+    //     state = screen_reset;
+    //   }  
 }
 
 /*
@@ -160,35 +155,26 @@ void getDistance()
       timeout_up.reset();
     }
     else if(timeout_up.repeat())
-    {
       distance_up=DEFAULTDISTANCE;
-    }
-    
   }
   
-  if(init_ok_down)
-  { 
-    status = sensor_down.GetDistance(&distance);
-    if (status == VL53L0X_ERROR_NONE)
-    {
-      distance_down=distance;
-      timeout_down.reset();
+    if(init_ok_down)
+    { 
+        status = sensor_down.GetDistance(&distance);
+        if (status == VL53L0X_ERROR_NONE)
+        {
+            distance_down=distance;
+            timeout_down.reset();
+        }
+        else if(timeout_down.repeat())
+            distance_down=DEFAULTDISTANCE;
     }
-    else if(timeout_down.repeat())
-    {
-      distance_down=DEFAULTDISTANCE;
-    }
-  }
   
-  if(distance_up>THRESHOLDDISTANCEMIN)
-  {
+  if(distance_up>THRESHOLDDISTANCEMIN)//?
     presence_up=distance_up<THRESHOLDDISTANCE;
-  }
   
-  if(distance_down>THRESHOLDDISTANCEMIN)
-  {
+  if(distance_down>THRESHOLDDISTANCEMIN)//?
     presence_down=distance_down<THRESHOLDDISTANCE;
-  }
   
   Serial.print("distance:|");
   Serial.print(distance_up);
@@ -204,30 +190,32 @@ void getDistance()
 void case_idle()
 {
     stopScreen();
-      if(presence_down == true){
-        if(!timeout_presence_in.started()){
-          timeout_presence_in.start();
-        }else if(timeout_presence_in.done()){
-          state = person_detected;
-          timeout_presence_in.reset();
-          timeout_presence_in.stop();
+    if(presence_down == true)
+    {
+        if(!timeout_presence_in.started())
+            timeout_presence_in.start();
+        else if(timeout_presence_in.done())
+        {
+            state = person_detected;
+            timeout_presence_in.reset();
+            timeout_presence_in.stop();
         }
-      }else{
+    }
+    else
+    {
         state = idle;
         timeout_presence_in.reset();
         timeout_presence_in.stop();
-      }
+    }
 }
 
-void person_detected()
+void case_person_detected()
 {
     stopScreen();
     if(presence_down == false)
     {
         if(!timeout_presence_out.started())
-        {
             timeout_presence_out.start();
-        }
         else if(timeout_presence_out.done())
         {
             state = screen_reset;
@@ -257,9 +245,7 @@ void case_move_up()
     {
         stopScreen();
         if(!timeout_presence_out.started())
-        {
             timeout_presence_out.start();
-        }
         else if(timeout_presence_out.done())
         {
             state = screen_reset;
@@ -272,9 +258,7 @@ void case_move_up()
     else if(presence_up == true)
     {
         if(!timeout_move_up.started())
-        {
             timeout_move_up.start();
-        }
         else if(timeout_move_up.done())
         {
             state = move_stop;
@@ -284,9 +268,7 @@ void case_move_up()
             delay(200);
         }
         else
-        {
             state = move_up;
-        }
         timeout_presence_out.reset();
         timeout_presence_out.stop();
     }
@@ -305,16 +287,13 @@ void case_move_up()
 
 void case_move_down()
 {
-
     if(presence_down == true)
     moveDownScreen();
     if(presence_down == false)
     {
         stopScreen();
         if(!timeout_presence_out.started())
-        {
             timeout_presence_out.start();
-        }
         else if(timeout_presence_out.done())
         {
             state = screen_reset;
@@ -327,9 +306,7 @@ void case_move_down()
     else if(presence_up == false)
     {
         if(!timeout_move_down.started())
-        {
             timeout_move_down.start();
-        }
         else if(timeout_move_down.done())
         {
             state = move_stop;
@@ -337,9 +314,7 @@ void case_move_down()
             timeout_move_down.stop();
         }
         else
-        {
             state = move_down;
-        }
         timeout_presence_out.reset();
         timeout_presence_out.stop();
     }
@@ -359,9 +334,7 @@ void case_move_stop()
     if(presence_down == false)
     {
         if(!timeout_presence_out.started())
-        {
             timeout_presence_out.start();
-        }
         else if(timeout_presence_out.done())
         {
             state = screen_reset;
@@ -379,73 +352,76 @@ void case_move_stop()
 
 void computeState()
 {
-  switch(state)
-  {
-    case idle:
-        case_idle();
-        break;
-    case person_detected:
-        case_person_detected();
-        break;
-      
-    case move_up:
-        case_move_up();
-        break;
-      
-    case move_down:
-        case_move_down();
-      break;
-      
-    case move_stop:
-      case_move_stop();
-      break;
-
-    case screen_reset:
-      resetScreen();
-      break;
-       
-    default:
-      break;
-  }
+    switch(state)
+    {
+        case idle:
+            case_idle();
+            break;
+        case person_detected:
+            case_person_detected();
+            break;
+        case move_up:
+            case_move_up();
+            break;
+        case move_down:
+            case_move_down();
+            break;
+        case move_stop:
+            case_move_stop();
+            break;
+        case screen_reset:
+            resetScreen();
+            break;
+        default:
+            break;
+    }
 }
 
 /*
  * show the state info in the serial
  */
-void printState(){
-  switch(state){
-    case idle:
-      Serial.println("state:|idle|");
-      break;
-    case person_detected:
-      Serial.println("state:|person_detected|");
-      break;
-    case move_up:
-      Serial.println("state:|move_up|");
-      break;
-    case move_down:
-      Serial.println("state:|move_down|");
-      break;
-    case move_stop:
-      Serial.println("state:|move_stop|");
-      break;
-     case screen_reset:
-      Serial.println("state:|screen_reset|");
-    default:
-      break;
-  }
+void printState()
+{
+    switch(state)
+    {
+        case idle:
+            Serial.println("state:|idle|");
+            break;
+        case person_detected:
+            Serial.println("state:|person_detected|");
+            break;
+        case move_up:
+            Serial.println("state:|move_up|");
+            break;
+        case move_down:
+            Serial.println("state:|move_down|");
+            break;
+        case move_stop:
+            Serial.println("state:|move_stop|");
+            break;
+        case screen_reset:
+            Serial.println("state:|screen_reset|");
+        default:
+            break;
+}
 }
 
 /*
  * move up the screen 
  */
+
+void control_motor(int pwm, int ina, int intb, int sel)
+{
+    analogWrite(PWM, pwm);
+    digitalWrite(InA,ina);
+    digitalWrite(InB,inb);
+    digitalWrite(SEL,sel);  
+}
+
 void moveUpScreen()
 {
-  Serial.println("motor:|moving_up|");
-  analogWrite(PWM, 255);
-  digitalWrite(InA,HIGH);
-  digitalWrite(InB,LOW);
-  digitalWrite(SEL,LOW);
+    Serial.println("motor:|moving_up|");
+    control_motor(255, HIGH, LOW, LOW);
 }
 
 /*
@@ -453,12 +429,8 @@ void moveUpScreen()
  */
 void moveDownScreen()
 {
-  Serial.println("motor:|moving_down|");
-  analogWrite(PWM, 255);
-  digitalWrite(InA,LOW);
-  digitalWrite(InB,HIGH);
-  digitalWrite(SEL,HIGH);
-  
+    Serial.println("motor:|moving_down|");
+    control_motor(255, LOW, HIGH, HIGH);
 }
 
 /*
@@ -466,11 +438,8 @@ void moveDownScreen()
  */
 void stopScreen()
 {
-  Serial.println("motor:|stopping|");
-  analogWrite(PWM, 0);
-  digitalWrite(InA,LOW);
-  digitalWrite(InB,LOW);
-  digitalWrite(SEL,HIGH);
+    Serial.println("motor:|stopping|");
+    control_motor(0, LOW, LOW, HIGH);
 }
 
 /*
@@ -478,22 +447,22 @@ void stopScreen()
  */
 void resetScreen()
 {
-  Serial.println("resetting");
-  if(reset_count < 8){
-    moveDownScreen();
-  }else{
-    moveUpScreen();
-  }
-  reset_count++;
+    Serial.println("resetting");
+    if(reset_count < 8)
+        moveDownScreen();
+    else
+        moveUpScreen();
+    reset_count++;
 }
 
 /*
  * The method will run when the interrupter is on.
  */
 void ISR() {
-  if(state == screen_reset){
-    stopScreen();
-    state = idle;
-    reset_count = 0;
-  }
+    if(state == screen_reset)
+    {
+        stopScreen();
+        state = idle;
+        reset_count = 0;
+    }
 }
