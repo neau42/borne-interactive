@@ -30,9 +30,9 @@ Neotimer timeout_move_down = Neotimer(3500);
 Neotimer timeout_presence_out = Neotimer(5000);
 Neotimer timeout_presence_in = Neotimer(3000);
 
-long lt_aff=0;
+// long lt_aff=0;
 int reset_count = 0;
-int val_interrupter = 0;
+// int val_interrupter = 0;
 
 // Max detection distance 
 const int THRESHOLDDISTANCE = 800;
@@ -41,7 +41,7 @@ const int THRESHOLDDISTANCEMIN = 50;
 // default detection distance
 const int DEFAULTDISTANCE = THRESHOLDDISTANCE+500;
 // time out detection distance
-const int TIMEOUTDISTANCE = 500;
+// const int TIMEOUTDISTANCE = 500;
 
 enum state_t {
   idle,
@@ -117,7 +117,7 @@ void setup() {
   }
 }
 
-long long watchdog = millis();
+// long long watchdog = millis();
 
 /* Loop ----------------------------------------------------------------------*/
 
@@ -127,17 +127,17 @@ void loop() {
   delay(100);
   digitalWrite(LED_BUILTIN, LOW);
   
-  watchdog= millis();
+//   watchdog= millis();
 
   getDistance();
   computeState();
   printState();
   
-  if(millis()-watchdog>5000)
-  {
-    Serial.println("Watch dog !");
-    state = screen_reset;
-  }  
+//   if(millis()-watchdog>5000)
+//   {
+//     Serial.println("Watch dog !");
+//     state = screen_reset;
+//   }  
 }
 
 /*
@@ -200,10 +200,10 @@ void getDistance()
 /*
  * compute and change the current state 
  */
-void computeState(){
-  switch(state){
-    case idle:
-      stopScreen();
+
+void case_idle()
+{
+    stopScreen();
       if(presence_down == true){
         if(!timeout_presence_in.started()){
           timeout_presence_in.start();
@@ -217,57 +217,81 @@ void computeState(){
         timeout_presence_in.reset();
         timeout_presence_in.stop();
       }
-      break;
-      
-    case person_detected:
-      stopScreen();
-      if(presence_down == false){
-        if(!timeout_presence_out.started()){
-          timeout_presence_out.start();
-        }else if(timeout_presence_out.done()){
-          state = screen_reset;
-          timeout_presence_out.reset();
-          timeout_presence_out.stop();
+}
+
+void person_detected()
+{
+    stopScreen();
+    if(presence_down == false)
+    {
+        if(!timeout_presence_out.started())
+        {
+            timeout_presence_out.start();
         }
-      }else if(presence_up == true){
+        else if(timeout_presence_out.done())
+        {
+            state = screen_reset;
+            timeout_presence_out.reset();
+            timeout_presence_out.stop();
+        }
+    }
+    else if(presence_up == true)
+    {
         state = move_up;
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }else{
+    }
+    else
+    {
         state = move_down;
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }
-      break;
-      
-    case move_up:
-      if(presence_down == true) moveUpScreen();
-      if(presence_down == false){
+    }
+}
+
+void case_move_up()
+{
+    if(presence_down == true)
+            moveUpScreen();
+    if(presence_down == false)
+    {
         stopScreen();
-        if(!timeout_presence_out.started()){
-          timeout_presence_out.start();
-        }else if(timeout_presence_out.done()){
-          state = screen_reset;
-          timeout_move_up.reset();
-          timeout_move_up.stop();
-          timeout_presence_out.reset();
-          timeout_presence_out.stop();
+        if(!timeout_presence_out.started())
+        {
+            timeout_presence_out.start();
         }
-      }else if(presence_up == true){
-        if(!timeout_move_up.started()){
-          timeout_move_up.start();
-        }else if(timeout_move_up.done()){
-          state = move_stop;
-          timeout_move_up.reset();
-          timeout_move_up.stop();
-          moveDownScreen();
-          delay(200);
-        }else{
-          state = move_up;
+        else if(timeout_presence_out.done())
+        {
+            state = screen_reset;
+            timeout_move_up.reset();
+            timeout_move_up.stop();
+            timeout_presence_out.reset();
+            timeout_presence_out.stop();
+        }
+    }
+    else if(presence_up == true)
+    {
+        if(!timeout_move_up.started())
+        {
+            timeout_move_up.start();
+        }
+        else if(timeout_move_up.done())
+        {
+            state = move_stop;
+            timeout_move_up.reset();
+            timeout_move_up.stop();
+            moveDownScreen();
+            delay(200);
+        }
+        else
+        {
+            state = move_up;
         }
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }else{
+    }
+    else
+    {
         state = move_stop;
         timeout_presence_out.reset();
         timeout_presence_out.stop();
@@ -275,58 +299,105 @@ void computeState(){
         timeout_move_up.stop();
         moveDownScreen();
         delay(1000);
-      }
-      break;
-      
-    case move_down:
-      if(presence_down == true) moveDownScreen();
-      if(presence_down == false){
+    }
+
+}
+
+void case_move_down()
+{
+
+    if(presence_down == true)
+    moveDownScreen();
+    if(presence_down == false)
+    {
         stopScreen();
-        if(!timeout_presence_out.started()){
-          timeout_presence_out.start();
-        }else if(timeout_presence_out.done()){
-          state = screen_reset;
-          timeout_move_down.reset();
-          timeout_move_down.stop();
-          timeout_presence_out.reset();
-          timeout_presence_out.stop();
+        if(!timeout_presence_out.started())
+        {
+            timeout_presence_out.start();
         }
-      }else if(presence_up == false){
-        if(!timeout_move_down.started()){
-          timeout_move_down.start();
-        }else if(timeout_move_down.done()){
-          state = move_stop;
-          timeout_move_down.reset();
-          timeout_move_down.stop();
-        }else{
-          state = move_down;
+        else if(timeout_presence_out.done())
+        {
+            state = screen_reset;
+            timeout_move_down.reset();
+            timeout_move_down.stop();
+            timeout_presence_out.reset();
+            timeout_presence_out.stop();
+        }
+    }
+    else if(presence_up == false)
+    {
+        if(!timeout_move_down.started())
+        {
+            timeout_move_down.start();
+        }
+        else if(timeout_move_down.done())
+        {
+            state = move_stop;
+            timeout_move_down.reset();
+            timeout_move_down.stop();
+        }
+        else
+        {
+            state = move_down;
         }
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }else{
+    }
+    else
+    {
         state = move_up;
         timeout_move_down.reset();
         timeout_move_down.stop();
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }
-      break;
-      
-    case move_stop:
-      stopScreen();
-      if(presence_down == false){
-        if(!timeout_presence_out.started()){
-          timeout_presence_out.start();
-        }else if(timeout_presence_out.done()){
-          state = screen_reset;
-          timeout_presence_out.reset();
-          timeout_presence_out.stop();
+    }
+}
+
+void case_move_stop()
+{
+    stopScreen();
+    if(presence_down == false)
+    {
+        if(!timeout_presence_out.started())
+        {
+            timeout_presence_out.start();
         }
-      }else{
+        else if(timeout_presence_out.done())
+        {
+            state = screen_reset;
+            timeout_presence_out.reset();
+            timeout_presence_out.stop();
+        }
+    }
+    else
+    {
         state = move_stop;
         timeout_presence_out.reset();
         timeout_presence_out.stop();
-      }
+    }
+}
+
+void computeState()
+{
+  switch(state)
+  {
+    case idle:
+        case_idle();
+        break;
+    case person_detected:
+        case_person_detected();
+        break;
+      
+    case move_up:
+        case_move_up();
+        break;
+      
+    case move_down:
+        case_move_down();
+      break;
+      
+    case move_stop:
+      case_move_stop();
       break;
 
     case screen_reset:
