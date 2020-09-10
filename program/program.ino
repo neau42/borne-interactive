@@ -1,77 +1,9 @@
 /* Includes ------------------------------------------------------------------*/
-#include <Wire.h>
-#include <vl53l0x_class.h>
-#include <neotimer.h>
-
-// Create components.
-// distance sansor
-TwoWire WIRE1(PB4, PA7); 
-VL53L0X sensor_up(&WIRE1, PB0, 0); 
-VL53L0X sensor_down(&WIRE1, PA12, 0); 
-
-//pin input 
-const int interrupter = PB7;
-
-// pin output for motor
-const int InA = PB6; 
-const int InB = PB1;
-const int SEL = PA11;
-const int PWM = PA8;
-
-bool presence_up = false;
-bool presence_down = false;
-
-Neotimer timeout_up = Neotimer(500);
-Neotimer timeout_down = Neotimer(500);
-
-Neotimer timeout_move_up = Neotimer(2500);
-Neotimer timeout_move_down = Neotimer(3500);
-
-Neotimer timeout_presence_out = Neotimer(5000);
-Neotimer timeout_presence_in = Neotimer(3000);
-
-// long lt_aff=0;
-int reset_count = 0;
-// int val_interrupter = 0;
-
-// Max detection distance 
-const int THRESHOLDDISTANCE = 800;
-// Min detection distance
-const int THRESHOLDDISTANCEMIN = 50;
-// default detection distance
-const int DEFAULTDISTANCE = THRESHOLDDISTANCE+500;
-// time out detection distance
-// const int TIMEOUTDISTANCE = 500;
-
-enum state_t {
-    idle,
-    person_detected,
-    move_up,
-    move_down,
-    move_stop,
-    screen_reset
-};
-
-state_t state = screen_reset;
-
-void getDistance();
-void computeAction();
-void moveUpScreen();
-void moveDownScreen();
-void stopScreen();
-void resetScreen();
-void computeState();
-void printState();
-void ISR();
-
-bool init_ok_up=true;
-bool init_ok_down=true;
-
+#include "borne_interactive.h"
 /* Setup ---------------------------------------------------------------------*/
 
 void setup()
 {
-    int status;
     // Led.
     pinMode(LED_BUILTIN, OUTPUT);
 
@@ -95,91 +27,91 @@ void setup()
     delay(1000);
 
     // Initialize VL53L0X top component.
-    status = sensor_up.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+7);
-    if(status)
+
+    if (sensor_up.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+7))
     {
-        init_ok_up=false;
+        init_ok_up = false;
         Serial.println("Init sensor_up failed...");
+
     }
     else
         Serial.println("Init sensor_up ok...");
     delay(1000);
-    status = sensor_down.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+2);
-    if(status)
+    if(sensor_down.InitSensor(VL53L0x_DEFAULT_DEVICE_ADDRESS+2))
     {
-        init_ok_down=false;
+        init_ok_down = false;
         Serial.println("Init sensor_down failed...");
     }
     else
         Serial.println("Init sensor_down ok...");
 }
 
-// long long watchdog = millis();
-
 /* Loop ----------------------------------------------------------------------*/
 
 void loop()
 {
+    state_t old_state = idle;
+
     // Led blinking.
     digitalWrite(LED_BUILTIN, HIGH);
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);
-    //   watchdog= millis();
     getDistance();
     computeState();
-    printState();
-    //   if(millis()-watchdog>5000)
-    //   {
-    //     Serial.println("Watch dog !");
-    //     state = screen_reset;
-    //   }  
+    if (state != old_state)
+    {
+        printState();
+        old_state = state;
+    }
+}
+
+void print_distance(uint32_t dist_up, uint32_t dist_down)
+{
+    Serial.print("distance: |");
+    Serial.print(dist_up);
+    Serial.print("\t|");
+    Serial.print(dist_down);
+    Serial.println("\t|");
 }
 
 /*
  * read the distance data from sensors and check if someone is standing in front of the terminal.
  */
+ 
 void getDistance()
 {
-  
-  uint32_t distance_up;
-  uint32_t distance_down;
-  uint32_t distance;
-  
-  if(init_ok_up)
-  {
-    // status = sensor_up.GetDistance(&distance);
-    if (sensor_up.GetDistance(&distance) == VL53L0X_ERROR_NONE)
+    uint32_t distance_up = DEFAULTDISTANCE;
+    uint32_t distance_down = DEFAULTDISTANCE;
+    uint32_t distance;
+
+    if(init_ok_up)
     {
-      distance_up=distance;
-      timeout_up.reset();
+        if (sensor_up.GetDistance(&distance) == VL53L0X_ERROR_NONE)
+        {
+            distance_up = distance;
+            timeout_up.reset();
+        }
+        else if(timeout_up.repeat())
+            distance_up = DEFAULTDISTANCE;
     }
-    else if(timeout_up.repeat())
-      distance_up=DEFAULTDISTANCE;
-  }
-  
     if(init_ok_down)
     { 
-        // status = sensor_down.GetDistance(&distance);
         if (sensor_down.GetDistance(&distance) == VL53L0X_ERROR_NONE)
         {
-            distance_down=distance;
+            distance_down = distance;
             timeout_down.reset();
         }
         else if(timeout_down.repeat())
-            distance_down=DEFAULTDISTANCE;
+            distance_down = DEFAULTDISTANCE;
     }
-  
-    if(distance_up>THRESHOLDDISTANCEMIN)//?
-        presence_up=distance_up<THRESHOLDDISTANCE;
+    if(distance_up > THRESHOLDDISTANCEMIN)
+        presence_up = distance_up < THRESHOLDDISTANCE;
     
-    if(distance_down>THRESHOLDDISTANCEMIN)//?
-        presence_down=distance_down<THRESHOLDDISTANCE;
-  
-    Serial.print("distance:|");
-    Serial.print(distance_up);
-    Serial.print("|");
-    Serial.print(distance_down);
-    Serial.println("|");
+    if(distance_down > THRESHOLDDISTANCEMIN)
+        presence_down = distance_down < THRESHOLDDISTANCE;
+    
+    if (presence_down || presence_up)//dbg
+        print_distance(distance_up, distance_down);
 }
 
 /*
@@ -437,7 +369,7 @@ void moveDownScreen()
  */
 void stopScreen()
 {
-    Serial.println("motor:|stopping|");
+    // Serial.println("motor:|stopping|");
     control_motor(0, LOW, LOW, HIGH);
 }
 
